@@ -52,26 +52,26 @@ class Model:
                 print(f'saving checkpoint on step: {g}')
 
 
+if __name__ == '__main__':
+    def can16(x, is_training):
+        y = tf.layers.conv2d(x, 16, 3, padding='same', activation=tf.nn.relu, dilation_rate=1)
+        y = tf.layers.conv2d(y, 16, 3, padding='same', activation=tf.nn.relu, dilation_rate=2)
+        y = tf.layers.conv2d(y, 16, 3, padding='same', activation=tf.nn.relu, dilation_rate=4)
+        y = tf.layers.conv2d(y, 16, 3, padding='same', activation=tf.nn.relu, dilation_rate=8)
+        y = tf.layers.conv2d(y, 16, 3, padding='same', activation=tf.nn.relu, dilation_rate=16)
+        y = tf.layers.conv2d(y, 16, 3, padding='same', activation=tf.nn.relu, dilation_rate=32)
+        y = tf.layers.conv2d(y, 16, 3, padding='same', activation=tf.nn.relu, dilation_rate=64)
+        y = tf.layers.conv2d(y, 16, 3, padding='same', activation=tf.nn.relu, dilation_rate=128)
+        y = tf.layers.conv2d(y, 16, 3, padding='same', activation=tf.nn.relu, dilation_rate=1)
+        y = tf.layers.conv2d(y, 1, 3, padding='same')
 
-def can16(x, is_training):
-    y = tf.layers.conv2d(x, 16, 3, padding='same', activation=tf.nn.relu, dilation_rate=1)
-    y = tf.layers.conv2d(y, 16, 3, padding='same', activation=tf.nn.relu, dilation_rate=2)
-    y = tf.layers.conv2d(y, 16, 3, padding='same', activation=tf.nn.relu, dilation_rate=4)
-    y = tf.layers.conv2d(y, 16, 3, padding='same', activation=tf.nn.relu, dilation_rate=8)
-    y = tf.layers.conv2d(y, 16, 3, padding='same', activation=tf.nn.relu, dilation_rate=16)
-    y = tf.layers.conv2d(y, 16, 3, padding='same', activation=tf.nn.relu, dilation_rate=32)
-    y = tf.layers.conv2d(y, 16, 3, padding='same', activation=tf.nn.relu, dilation_rate=64)
-    y = tf.layers.conv2d(y, 16, 3, padding='same', activation=tf.nn.relu, dilation_rate=128)
-    y = tf.layers.conv2d(y, 16, 3, padding='same', activation=tf.nn.relu, dilation_rate=1)
-    y = tf.layers.conv2d(y, 1, 3, padding='same')
+        return y
 
-    return y
+    def rmse(predictions, y_train):
+        return tf.sqrt(tf.reduce_mean(tf.square(predictions - y_train)))
 
-def rmse(predictions, y_train):
-    return tf.sqrt(tf.reduce_mean(tf.square(predictions - y_train)))
+    input_fn = Dataset(['./train_x/p1', './train_x/p2'], ['./train_y'], 1, 1, 5).next_batch
 
-input_fn = Dataset(['./train_x/p1', './train_x/p2'], ['./train_y'], 5).next_batch
+    m = Model()
 
-m = Model()
-
-m.train(input_fn, can16, rmse, tf.train.AdamOptimizer(0.0001), 100, './test')
+    m.train(input_fn, can16, rmse, tf.train.AdamOptimizer(0.0001), 100, './test')
