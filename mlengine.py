@@ -4,6 +4,7 @@ import math
 
 from dataset import Dataset
 
+
 class Model:
     def __init__(self):
         self.session = tf.Session()
@@ -27,7 +28,8 @@ class Model:
 
         predictions = architecture(x_train, True)
 
-        accuracy_op = tf.reduce_mean(tf.cast(tf.equal(tf.argmax(predictions, 1), tf.argmax(y_train, 1)), tf.float32))
+        accuracy_op = tf.reduce_mean(
+            tf.cast(tf.equal(tf.argmax(predictions, 1), tf.argmax(y_train, 1)), tf.float32))
 
         loss_op = loss(predictions, y_train)
 
@@ -35,43 +37,34 @@ class Model:
 
         optimizer_op = optimizer.minimize(loss_op, global_step=global_step)
 
+        self.session.run(tf.global_variables_initializer())
+
         if tf.train.latest_checkpoint(path) is not None:
             self.restore(path)
             print('restoring from checkpoint')
 
-        self.session.run(tf.global_variables_initializer())
-
         for i in range(num_step):
 
-            g, a, l, _ = self.session.run([global_step, accuracy_op, loss_op, optimizer_op])
+            g, a, l, _ = self.session.run(
+                [global_step, accuracy_op, loss_op, optimizer_op])
 
             print(f'step: {g} - accuracy: {a} - loss: {l}')
+
             if l < self.best_loss:
                 self.best_loss = l
                 self.save(path)
                 print(f'saving checkpoint on step: {g}')
 
+    def predict(self, input_fn, architecture, input_shape, path):
 
-if __name__ == '__main__':
-    def can16(x, is_training):
-        y = tf.layers.conv2d(x, 16, 3, padding='same', activation=tf.nn.relu, dilation_rate=1)
-        y = tf.layers.conv2d(y, 16, 3, padding='same', activation=tf.nn.relu, dilation_rate=2)
-        y = tf.layers.conv2d(y, 16, 3, padding='same', activation=tf.nn.relu, dilation_rate=4)
-        y = tf.layers.conv2d(y, 16, 3, padding='same', activation=tf.nn.relu, dilation_rate=8)
-        y = tf.layers.conv2d(y, 16, 3, padding='same', activation=tf.nn.relu, dilation_rate=16)
-        y = tf.layers.conv2d(y, 16, 3, padding='same', activation=tf.nn.relu, dilation_rate=32)
-        y = tf.layers.conv2d(y, 16, 3, padding='same', activation=tf.nn.relu, dilation_rate=64)
-        y = tf.layers.conv2d(y, 16, 3, padding='same', activation=tf.nn.relu, dilation_rate=128)
-        y = tf.layers.conv2d(y, 16, 3, padding='same', activation=tf.nn.relu, dilation_rate=1)
-        y = tf.layers.conv2d(y, 1, 3, padding='same')
+        predictions = architecture(
+            tf.placeholder(tf.float32, shape=input_shape, name='input'), False)
 
-        return y
+        self.session.run(tf.global_variables_initializer())
 
-    def rmse(predictions, y_train):
-        return tf.sqrt(tf.reduce_mean(tf.square(predictions - y_train)))
+        if tf.train.latest_checkpoint(path) is not None:
+            self.restore(path)
+            print('restoring from checkpoint')
 
-    input_fn = Dataset(['./train_x/p1', './train_x/p2'], ['./train_y'], 1, 1, 5).next_batch
-
-    m = Model()
-
-    m.train(input_fn, can16, rmse, tf.train.AdamOptimizer(0.0001), 100, './test')
+        for x in input_fn():
+            yield self.session.run(predictions, feed_dict={'input:0': x})

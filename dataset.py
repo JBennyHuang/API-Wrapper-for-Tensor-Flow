@@ -3,6 +3,7 @@ import numpy as np
 
 from glob import glob
 
+
 class Dataset:
     def load_filenames(self, dirs):
         return np.column_stack(sorted(glob('{}/*.png'.format(d))) for d in dirs)
@@ -19,8 +20,10 @@ class Dataset:
         return tensor
 
     def parse_fn(self, x_train, y_train):
-        x_train = tf.map_fn(lambda e: self.load_image(e, self.x_channels), x_train, dtype=tf.float32)
-        y_train = tf.map_fn(lambda e: self.load_image(e, self.y_channels), y_train, dtype=tf.float32)
+        x_train = tf.map_fn(lambda e: self.load_image(
+            e, self.x_channels), x_train, dtype=tf.float32)
+        y_train = tf.map_fn(lambda e: self.load_image(
+            e, self.y_channels), y_train, dtype=tf.float32)
         return self.reshape_tensor(x_train), self.reshape_tensor(y_train)
 
     def preproc_fn(self, x_train, y_train):
@@ -30,7 +33,8 @@ class Dataset:
         self.x_channels = x_channels
         self.y_channels = y_channels
 
-        x_train, y_train = self.load_filenames(x_train_dirs), self.load_filenames(y_train_dirs)
+        x_train, y_train = self.load_filenames(
+            x_train_dirs), self.load_filenames(y_train_dirs)
 
         dataset = tf.data.Dataset.from_tensor_slices((x_train, y_train))
         dataset = dataset.shuffle(len(x_train))
