@@ -1,48 +1,34 @@
 import tensorflow as tf
 import numpy as np
 
-from glob import glob
-
 
 class Dataset:
-    def load_filenames(self, dirs):
-        return np.column_stack(sorted(glob('{}/*.png'.format(d))) for d in dirs)
 
-    def load_image(self, filename, channels):
-        image = tf.read_file(filename)
-        image = tf.image.decode_png(image, channels=channels, dtype=tf.uint16)
-        image = tf.image.convert_image_dtype(image, dtype=tf.float32)
-        return image
+    def __init__(self, x_train_paths, y_train_paths, load_paths, data_parser, data_preprocessor, batch_size):
+        self.session = tf.Session()
 
-    def reshape_tensor(self, tensor):
-        tensor = tf.unstack(tensor)
-        tensor = tf.concat(tensor, 2)
-        return tensor
+        x_train, y_train = load_paths(x_train_paths, y_train_paths)
 
-    def parse_fn(self, x_train, y_train):
-        x_train = tf.map_fn(lambda e: self.load_image(
-            e, self.x_channels), x_train, dtype=tf.float32)
-        y_train = tf.map_fn(lambda e: self.load_image(
-            e, self.y_channels), y_train, dtype=tf.float32)
-        return self.reshape_tensor(x_train), self.reshape_tensor(y_train)
+        def data_parser_fn(x_train, y_train):
+            output = tf.py_func(data_parser, [x_train, y_train], [
+                tf.float32, tf.float32])
+            return output
 
-    def preproc_fn(self, x_train, y_train):
-        return x_train, y_train
+        def data_preprocessor_fn(x_train, y_train):
+            output = tf.py_func(data_preprocessor, [
+                x_train, y_train], [tf.float32, tf.float32])
+            return output
 
-    def __init__(self, x_train_dirs, y_train_dirs, x_channels, y_channels, batch_size, num_parallel_calls=2, prefetch_size_batch=1):
-        self.x_channels = x_channels
-        self.y_channels = y_channels
-
-        x_train, y_train = self.load_filenames(
-            x_train_dirs), self.load_filenames(y_train_dirs)
+        print(x_train.shape)
+        print(y_train.shape)
 
         dataset = tf.data.Dataset.from_tensor_slices((x_train, y_train))
         dataset = dataset.shuffle(len(x_train))
-        dataset = dataset.map(self.parse_fn, num_parallel_calls)
-        dataset = dataset.map(self.preproc_fn, num_parallel_calls)
+        dataset = dataset.prefetch(batch_size)
+        dataset = dataset.map(data_parser_fn, 4)
+        dataset = dataset.map(data_preprocessor_fn, 4)
         dataset = dataset.repeat()
         dataset = dataset.batch(batch_size)
-        dataset = dataset.prefetch(prefetch_size_batch)
 
         self.dataset_iterator = dataset.make_one_shot_iterator()
 

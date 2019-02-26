@@ -1,8 +1,11 @@
 import tensorflow as tf
+import numpy as np
+import cv2
 
 import math
+import os
 
-from dataset import Dataset
+os.environ['CUDA_VISIBLE_DEVICES'] = '1'
 
 
 class Model:
@@ -22,14 +25,20 @@ class Model:
         self.best_loss = float(f.readlines()[-1])
         f.close()
 
-    def train(self, input_fn, architecture, loss, optimizer, num_step, path):
+    def train(self, input_shape, output_shape, input_fn, architecture, loss, optimizer, num_step, path):
 
         x_train, y_train = input_fn()
 
+        x_train = tf.reshape(x_train, input_shape)
+        y_train = tf.reshape(y_train, output_shape)
+
         predictions = architecture(x_train, True)
 
-        accuracy_op = tf.reduce_mean(
-            tf.cast(tf.equal(tf.argmax(predictions, 1), tf.argmax(y_train, 1)), tf.float32))
+        # accuracy_op = tf.reduce_mean(
+        #     tf.cast(tf.equal(tf.argmax(predictions, 1), tf.argmax(y_train, 1)), tf.float32))
+
+        accuracy_op = tf.reduce_sum(
+            y_train * predictions) / tf.reduce_sum(y_train + predictions)
 
         loss_op = loss(predictions, y_train)
 
@@ -50,15 +59,15 @@ class Model:
 
             print(f'step: {g} - accuracy: {a} - loss: {l}')
 
-            if l < self.best_loss:
+            if l < self.best_loss or g % 1000 == 0:
                 self.best_loss = l
                 self.save(path)
                 print(f'saving checkpoint on step: {g}')
 
     def predict(self, input_fn, architecture, input_shape, path):
 
-        predictions = architecture(
-            tf.placeholder(tf.float32, shape=input_shape, name='input'), False)
+        predictions = architecture(tf.placeholder(
+            tf.float32, shape=input_shape, name='input'), False)
 
         self.session.run(tf.global_variables_initializer())
 
